@@ -1,0 +1,23 @@
+# Environment variables (contains secrets!)
+.env
+
+# Old config file (if you still have it)
+config.json
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude
