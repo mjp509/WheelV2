@@ -222,17 +222,21 @@ client.on('message', async (channel, tags, message, self) => {
         log(`${displayName} won! Attempting to assign VIP...`);
         const result = await assignVIP(broadcasterId, userId);
 
-        if (result.success) {
-          client.say(channel, `aga`);
-        } else if (result.alreadyVIP) {
-          client.say(channel, `aga`);
-        } else {
-          client.say(channel, `aga`);
-        }
+        setTimeout(() => {
+          if (result.success) {
+            client.say(channel, `aga`);
+          } else if (result.alreadyVIP) {
+            client.say(channel, `aga`);
+          } else {
+            client.say(channel, `aga`);
+          }
+        }, 12000);
       } else {
         log(`${displayName} lost. Timing out for 300 seconds.`);
         client.say(channel, `/timeout ${username} 300`);
-        client.say(channel, `o7`);
+        setTimeout(() => {
+          client.say(channel, `o7`);
+        }, 12000);
       }
     } catch (err) {
       log(`Error processing wheel spin for ${displayName}: ${err.message}`, 'ERROR');
