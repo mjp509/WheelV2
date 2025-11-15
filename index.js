@@ -119,6 +119,11 @@ server.listen(PORT, () => {
 });
 
 const client = new tmi.Client({
+  options: { debug: false },
+  connection: {
+    reconnect: true,
+    secure: true
+  },
   identity: {
     username: process.env.TWITCH_BOT_USERNAME,
     password: process.env.TWITCH_ACCESS_TOKEN
@@ -132,6 +137,27 @@ client.connect();
 
 function getCleanAccessToken() {
   return process.env.TWITCH_ACCESS_TOKEN.replace('oauth:', '');
+}
+
+async function validateToken() {
+  try {
+    const res = await axios.get('https://id.twitch.tv/oauth2/validate', {
+      headers: {
+        'Authorization': `Bearer ${getCleanAccessToken()}`
+      }
+    });
+
+    log(`Token is VALID`, 'SUCCESS');
+    log(`Token info: Client ID: ${res.data.client_id}, User: ${res.data.login}, Expires in: ${res.data.expires_in}s`);
+    log(`Scopes: ${res.data.scopes.join(', ')}`);
+    return true;
+  } catch (err) {
+    log(`Token is INVALID: ${err.response?.data?.message || err.message}`, 'ERROR');
+    if (err.response?.status === 401) {
+      log(`Your access token has expired or is invalid. Please generate a new one.`, 'ERROR');
+    }
+    return false;
+  }
 }
 
 async function getUserId(username) {
@@ -153,6 +179,41 @@ async function getUserId(username) {
   } catch (err) {
     log(`Failed to get user ID for ${username}: ${err.message}`, 'ERROR');
     throw err;
+  }
+}
+
+async function timeoutUser(broadcasterId, userId, duration, reason) {
+  try {
+    const res = await axios.post(
+      `https://api.twitch.tv/helix/moderation/bans?broadcaster_id=${broadcasterId}&moderator_id=${broadcasterId}`,
+      {
+        data: {
+          user_id: userId,
+          duration: duration,
+          reason: reason
+        }
+      },
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${getCleanAccessToken()}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (res.status === 200) {
+      log(`Successfully timed out user ID: ${userId} for ${duration} seconds`, 'SUCCESS');
+      return { success: true };
+    }
+    return { success: false };
+  } catch (err) {
+    log(`Failed to timeout user ID ${userId}: ${err.message}`, 'ERROR');
+    if (err.response) {
+      log(`API Response Status: ${err.response.status}`, 'ERROR');
+      log(`API Response: ${JSON.stringify(err.response.data)}`, 'ERROR');
+    }
+    return { success: false, error: err.response?.data };
   }
 }
 
@@ -233,7 +294,14 @@ client.on('message', async (channel, tags, message, self) => {
         }, 12000);
       } else {
         log(`${displayName} lost. Timing out for 300 seconds.`);
-        client.say(channel, `/timeout ${username} 300`);
+        const timeoutResult = await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
+
+        if (timeoutResult.success) {
+          log(`Successfully timed out ${displayName}`, 'SUCCESS');
+        } else {
+          log(`Failed to timeout ${displayName}`, 'ERROR');
+        }
+
         setTimeout(() => {
           client.say(channel, `o7`);
         }, 12000);
@@ -245,10 +313,13 @@ client.on('message', async (channel, tags, message, self) => {
   }
 });
 
-client.on('connected', (address, port) => {
+client.on('connected', async (address, port) => {
   log(`Connected to ${address}:${port}`, 'SUCCESS');
   log(`Monitoring channel: ${process.env.TWITCH_CHANNEL}`);
   log(`Watching for redemptions: "${process.env.REDEMPTION_ID}"`);
+
+  // Validate token on connection
+  await validateToken();
 });
 
 client.on('disconnected', (reason) => {
