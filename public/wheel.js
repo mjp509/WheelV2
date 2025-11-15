@@ -163,7 +163,7 @@ function drawWheel(rotation = 0) {
     ctx.restore();
 }
 
-function spinWheel(isWin, duration = 12000) {
+function spinWheel(isWin, duration = 14000) {
     if (isSpinning) return;
     isSpinning = true;
 
@@ -301,7 +301,7 @@ function connectWebSocket() {
 
         if (data.type === 'spin') {
             console.log('Received spin command:', data);
-            spinWheel(data.isWin, 12000);
+            spinWheel(data.isWin, 14000);
         }
     };
 

@@ -64,7 +64,7 @@ const client = new tmi.Client({
     secure: true
   },
   identity: {
-    username: process.env.TWITCH_BOT_USERNAME,
+    username: process.env.TWITCH_CHANNEL,
     password: process.env.TWITCH_ACCESS_TOKEN
   },
   channels: [process.env.TWITCH_CHANNEL]
@@ -120,8 +120,17 @@ async function timeoutUser(broadcasterId, userId, duration, reason) {
 
     return { success: res.status === 200 };
   } catch (err) {
-    log(`Failed to timeout user: ${err.message}`, 'ERROR');
-    return { success: false };
+    const status = err.response?.status;
+    const message = err.response?.data?.message?.toLowerCase() || '';
+
+    // 400 = Bad Request (user cannot be banned - VIP, mod, broadcaster, or already banned)
+    const cannotTimeout = status === 400;
+
+    if (!cannotTimeout) {
+      log(`Failed to timeout user (${status}): ${err.response?.data?.message || err.message}`, 'ERROR');
+    }
+
+    return { success: false, cannotTimeout: cannotTimeout };
   }
 }
 
@@ -140,11 +149,13 @@ async function assignVIP(broadcasterId, userId) {
 
     return { success: res.status === 204 };
   } catch (err) {
-    const isAlreadyVIP = err.response?.status === 409 ||
-                         err.response?.data?.message?.toLowerCase().includes('already');
+    const status = err.response?.status;
+
+    // 422 = Unprocessable Entity (user is already a VIP)
+    const isAlreadyVIP = status === 422;
 
     if (!isAlreadyVIP) {
-      log(`Failed to assign VIP: ${err.message}`, 'ERROR');
+      log(`Failed to assign VIP (${status}): ${err.response?.data?.message || err.message}`, 'ERROR');
     }
 
     return { success: false, alreadyVIP: isAlreadyVIP };
@@ -177,21 +188,53 @@ client.on('message', async (channel, tags, message, self) => {
 
       const userId = await getUserId(username);
 
-      // Wait for wheel animation to complete (12 seconds) before applying VIP/timeout
+      // Wait for wheel animation to complete (14 seconds) before applying VIP/timeout
       setTimeout(async () => {
-        if (roll > 90) {
-          log(`${displayName} won!`, 'SUCCESS');
-          await assignVIP(broadcasterId, userId);
-          client.say(channel, `aga`);
-        } else {
-          log(`${displayName} lost`);
-          await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
-          client.say(channel, `o7`);
+        try {
+          // Check if user is the broadcaster
+          const isBroadcaster = userId === broadcasterId;
+
+          if (roll > 90) {
+            log(`${displayName} won!`, 'SUCCESS');
+
+            if (isBroadcaster) {
+              log(`${displayName} is the broadcaster and cannot be granted VIP.`);
+            } else {
+              const result = await assignVIP(broadcasterId, userId);
+
+              if (result.success) {
+                await client.say(channel, `aga`);
+              } else if (result.alreadyVIP) {
+                await client.say(channel, `${displayName} is already VIP! Lucky escape.`);
+              } else {
+                await client.say(channel, `${displayName} won but couldn't grant VIP.`);
+              }
+            }
+          } else {
+            log(`${displayName} lost`);
+
+            if (isBroadcaster) {
+              log(`${displayName} is the broadcaster and cannot be timed out.`);
+            } else {
+              const result = await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
+
+              if (result.success) {
+                await client.say(channel, `o7`);
+              } else if (result.cannotTimeout) {
+                await client.say(channel, `${displayName} cannot be timed out (VIP/Mod).`);
+              } else {
+                await client.say(channel, `${displayName} lost but couldn't apply timeout.`);
+              }
+            }
+          }
+        } catch (err) {
+          log(`Error applying wheel result for ${displayName}: ${err.message || err}`, 'ERROR');
+          await client.say(channel, `Something went wrong processing the result for ${displayName}.`).catch(() => {});
         }
-      }, 12000);
+      }, 14000);
     } catch (err) {
-      log(`Error processing wheel spin for ${displayName}: ${err.message}`, 'ERROR');
-      client.say(channel, `Something went wrong processing the wheel spin for ${displayName}.`);
+      log(`Error processing wheel spin for ${displayName}: ${err.message || err}`, 'ERROR');
+      await client.say(channel, `Something went wrong processing the wheel spin for ${displayName}.`).catch(() => {});
     }
   }
 });
@@ -207,6 +250,6 @@ client.on('disconnected', (reason) => {
 });
 
 process.on('unhandledRejection', (err) => {
-  log(`Unhandled rejection: ${err.message}`, 'ERROR');
+  log(`Unhandled rejection: ${err?.message || err || 'Unknown error'}`, 'ERROR');
   console.error(err);
 });

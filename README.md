@@ -13,6 +13,7 @@ npm install
 
 Copy `.env.example` to `.env` and fill in:
 
+- `TWITCH_BOT_USERNAME` - Your bot's username (can be your own account)
 - `TWITCH_CHANNEL` - Your channel name
 - `TWITCH_CLIENT_ID` - Get from [Twitch Dev Console](https://dev.twitch.tv/console)
 - `TWITCH_ACCESS_TOKEN` - Generate at [Twitch Token Generator](https://twitchtokengenerator.com/) with scopes: `chat:read`, `chat:edit`, `channel:manage:vips`, `moderator:manage:banned_users`
@@ -42,7 +43,7 @@ The wheel appears automatically when someone redeems the reward.
 
 ## How It Works
 
-- Spins for 12 seconds
+- Spins for 14 seconds
 - Win (>90): VIP assigned after animation completes
 - Lose (≤90): 300 second timeout after animation completes
 - Tick sound plays as wheel spins past segments
