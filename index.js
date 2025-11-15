@@ -216,7 +216,7 @@ client.on('message', async (channel, tags, message, self) => {
             if (isBroadcaster) {
               log(`${displayName} is the broadcaster and cannot be timed out.`);
             } else {
-              const result = await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
+              const result = await timeoutUser(broadcasterId, userId, 90, 'Lost the wheel spin');
 
               if (result.success) {
                 await client.say(channel, `o7`);

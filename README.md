@@ -44,7 +44,7 @@ The wheel appears automatically when someone redeems the reward.
 
 - Spins for 14 seconds
 - Win (>90): VIP assigned after animation completes
-- Lose (≤90): 300 second timeout after animation completes
+- Lose (≤90): 90 second timeout after animation completes
 - Tick sound plays as wheel spins past segments
 - W or L sound plays depending on result
 
