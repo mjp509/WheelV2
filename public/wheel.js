@@ -31,6 +31,28 @@ winSound.addEventListener('error', (e) => console.error('Win sound failed to loa
 loseSound.addEventListener('canplaythrough', () => console.log('Lose sound loaded successfully'));
 loseSound.addEventListener('error', (e) => console.error('Lose sound failed to load:', e));
 
+// Create Web Audio context for tick sound
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTickSound() {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Warm, upbeat thock - higher than deep bass but still substantial
+    oscillator.frequency.value = 300; // Mid-range for upbeat but solid feel
+    oscillator.type = 'sine';
+
+    // Clean, snappy envelope at 50% volume
+    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.07);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.07);
+}
+
 function drawWheel(rotation = 0) {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -94,7 +116,7 @@ function drawWheel(rotation = 0) {
     ctx.fillText('VIP', 0, 0);
 
     if (winImage.complete && winImage.naturalHeight !== 0) {
-        const imgSize = 50;
+        const imgSize = 160;
         ctx.drawImage(
             winImage,
             -imgSize / 2,
@@ -178,7 +200,59 @@ function spinWheel(isWin, duration = 12000) {
 
     canvas.classList.add('spinning');
 
+    // Track segment crossings during spin
+    const startTime = Date.now();
+    let lastSegment = -1;
+    let segmentCrossingCount = 0;
+    let animationFrameId;
+
+    function monitorSpin() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Cubic bezier easing function (0.3, 0, 0.2, 1) - slower start
+        const easeProgress = cubicBezier(progress, 0.3, 0, 0.2, 1);
+        const currentAngle = easeProgress * totalRotation;
+
+        // Calculate which segment is currently at the pointer (top center)
+        const pointerPosition = (3 * Math.PI) / 2; // 270 degrees (top)
+        const normalizedAngle = (currentAngle % (2 * Math.PI));
+        const segmentAtPointer = Math.floor(((pointerPosition - normalizedAngle + 2 * Math.PI) % (2 * Math.PI)) / anglePerSegment) % segments;
+
+        if (segmentAtPointer !== lastSegment && lastSegment !== -1) {
+            segmentCrossingCount++;
+            // Play sound every 3rd segment crossing for less frequent ticks
+            if (segmentCrossingCount % 3 === 0) {
+                playTickSound();
+            }
+        }
+        lastSegment = segmentAtPointer;
+
+        if (progress < 1) {
+            animationFrameId = requestAnimationFrame(monitorSpin);
+        }
+    }
+
+    // Cubic bezier approximation for easing
+    function cubicBezier(t, p1x, p1y, p2x, p2y) {
+        const cx = 3 * p1x;
+        const bx = 3 * (p2x - p1x) - cx;
+        const ax = 1 - cx - bx;
+        const cy = 3 * p1y;
+        const by = 3 * (p2y - p1y) - cy;
+        const ay = 1 - cy - by;
+
+        function sampleCurveY(t) {
+            return ((ay * t + by) * t + cy) * t;
+        }
+
+        return sampleCurveY(t);
+    }
+
+    animationFrameId = requestAnimationFrame(monitorSpin);
+
     setTimeout(() => {
+        cancelAnimationFrame(animationFrameId);
         canvas.classList.remove('spinning');
         currentRotation = totalRotation % (2 * Math.PI);
 

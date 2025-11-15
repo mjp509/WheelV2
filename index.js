@@ -5,7 +5,6 @@ const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
 const path = require('path');
-const OBSWebSocket = require('obs-websocket-js').default;
 
 // Validate required environment variables
 const requiredEnvVars = [
@@ -13,8 +12,7 @@ const requiredEnvVars = [
   'TWITCH_CHANNEL',
   'TWITCH_CLIENT_ID',
   'TWITCH_ACCESS_TOKEN',
-  'REDEMPTION_ID',
-  'OBS_PASSWORD'
+  'REDEMPTION_ID'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -31,60 +29,6 @@ function log(message, level = 'INFO') {
   console.log(`[${timestamp}] ${emoji} ${level}: ${message}`);
 }
 
-// OBS WebSocket connection
-const obs = new OBSWebSocket();
-let obsConnected = false;
-let obsReconnectAttempts = 0;
-const MAX_OBS_RECONNECT_ATTEMPTS = 5;
-const OBS_RECONNECT_DELAY = 5000;
-
-async function connectOBS() {
-  try {
-    log('Attempting to connect to OBS WebSocket...');
-
-    await obs.connect('ws://localhost:4455', process.env.OBS_PASSWORD, {
-      rpcVersion: 1
-    });
-
-    obsConnected = true;
-    obsReconnectAttempts = 0;
-    log('Connected to OBS WebSocket', 'SUCCESS');
-  } catch (err) {
-    obsConnected = false;
-    log(`OBS connection failed: ${err.message}`, 'ERROR');
-
-    if (obsReconnectAttempts < MAX_OBS_RECONNECT_ATTEMPTS) {
-      obsReconnectAttempts++;
-      const delay = OBS_RECONNECT_DELAY * obsReconnectAttempts;
-      log(`Retrying OBS connection in ${delay / 1000} seconds (attempt ${obsReconnectAttempts}/${MAX_OBS_RECONNECT_ATTEMPTS})...`);
-
-      setTimeout(connectOBS, delay);
-    } else {
-      log(`Max OBS reconnection attempts reached. Please check OBS WebSocket settings.`, 'ERROR');
-      log(`Make sure OBS is running and WebSocket server is enabled (Tools > WebSocket Server Settings)`, 'ERROR');
-    }
-  }
-}
-
-// Handle OBS disconnection
-obs.on('ConnectionClosed', () => {
-  obsConnected = false;
-  log('OBS connection closed', 'ERROR');
-  obsReconnectAttempts = 0;
-  setTimeout(connectOBS, OBS_RECONNECT_DELAY);
-});
-
-obs.on('ConnectionError', (err) => {
-  obsConnected = false;
-  log(`OBS connection error: ${err.message}`, 'ERROR');
-});
-
-obs.on('Identified', () => {
-  log('OBS WebSocket identified successfully', 'SUCCESS');
-});
-
-connectOBS();
-
 // HTTP server for wheel overlay
 const app = express();
 const server = http.createServer(app);
@@ -93,11 +37,7 @@ const wss = new WebSocket.Server({ server });
 app.use(express.static(path.join(__dirname, 'public')));
 
 wss.on('connection', (ws) => {
-  log('WebSocket client connected (likely OBS browser source)', 'SUCCESS');
-
-  ws.on('close', () => {
-    log('WebSocket client disconnected');
-  });
+  log('Browser source connected', 'SUCCESS');
 
   ws.on('error', (error) => {
     log(`WebSocket error: ${error.message}`, 'ERROR');
@@ -139,27 +79,6 @@ function getCleanAccessToken() {
   return process.env.TWITCH_ACCESS_TOKEN.replace('oauth:', '');
 }
 
-async function validateToken() {
-  try {
-    const res = await axios.get('https://id.twitch.tv/oauth2/validate', {
-      headers: {
-        'Authorization': `Bearer ${getCleanAccessToken()}`
-      }
-    });
-
-    log(`Token is VALID`, 'SUCCESS');
-    log(`Token info: Client ID: ${res.data.client_id}, User: ${res.data.login}, Expires in: ${res.data.expires_in}s`);
-    log(`Scopes: ${res.data.scopes.join(', ')}`);
-    return true;
-  } catch (err) {
-    log(`Token is INVALID: ${err.response?.data?.message || err.message}`, 'ERROR');
-    if (err.response?.status === 401) {
-      log(`Your access token has expired or is invalid. Please generate a new one.`, 'ERROR');
-    }
-    return false;
-  }
-}
-
 async function getUserId(username) {
   try {
     const res = await axios.get(`https://api.twitch.tv/helix/users?login=${username}`, {
@@ -173,9 +92,7 @@ async function getUserId(username) {
       throw new Error(`User not found: ${username}`);
     }
 
-    const userId = res.data.data[0].id;
-    log(`Retrieved user ID for ${username}: ${userId}`);
-    return userId;
+    return res.data.data[0].id;
   } catch (err) {
     log(`Failed to get user ID for ${username}: ${err.message}`, 'ERROR');
     throw err;
@@ -202,18 +119,10 @@ async function timeoutUser(broadcasterId, userId, duration, reason) {
       }
     );
 
-    if (res.status === 200) {
-      log(`Successfully timed out user ID: ${userId} for ${duration} seconds`, 'SUCCESS');
-      return { success: true };
-    }
-    return { success: false };
+    return { success: res.status === 200 };
   } catch (err) {
-    log(`Failed to timeout user ID ${userId}: ${err.message}`, 'ERROR');
-    if (err.response) {
-      log(`API Response Status: ${err.response.status}`, 'ERROR');
-      log(`API Response: ${JSON.stringify(err.response.data)}`, 'ERROR');
-    }
-    return { success: false, error: err.response?.data };
+    log(`Failed to timeout user: ${err.message}`, 'ERROR');
+    return { success: false };
   }
 }
 
@@ -230,31 +139,21 @@ async function assignVIP(broadcasterId, userId) {
       }
     );
 
-    if (res.status === 204) {
-      log(`Successfully assigned VIP to user ID: ${userId}`, 'SUCCESS');
-      return { success: true };
-    }
-    return { success: false };
+    return { success: res.status === 204 };
   } catch (err) {
-    log(`Failed to assign VIP to user ID ${userId}: ${err.message}`, 'ERROR');
-    if (err.response) {
-      log(`API Response: ${JSON.stringify(err.response.data)}`, 'ERROR');
+    const isAlreadyVIP = err.response?.status === 409 ||
+                         err.response?.data?.message?.toLowerCase().includes('already');
 
-      if (err.response.status === 409 ||
-          (err.response.data && err.response.data.message &&
-           err.response.data.message.toLowerCase().includes('already'))) {
-        log(`User ${userId} is already a VIP`, 'INFO');
-        return { success: false, alreadyVIP: true };
-      }
+    if (!isAlreadyVIP) {
+      log(`Failed to assign VIP: ${err.message}`, 'ERROR');
     }
-    return { success: false, alreadyVIP: false };
+
+    return { success: false, alreadyVIP: isAlreadyVIP };
   }
 }
 
 client.on('message', async (channel, tags, message, self) => {
   if (self) return;
-
-  console.log(message, tags['custom-reward-id'], tags['custom-reward-title']);
 
   if (tags['custom-reward-id'] === process.env.REDEMPTION_ID) {
     const displayName = tags['display-name'];
@@ -279,33 +178,18 @@ client.on('message', async (channel, tags, message, self) => {
 
       const userId = await getUserId(username);
 
-      if (roll > 90) {
-        log(`${displayName} won! Attempting to assign VIP...`);
-        const result = await assignVIP(broadcasterId, userId);
-
-        setTimeout(() => {
-          if (result.success) {
-            client.say(channel, `aga`);
-          } else if (result.alreadyVIP) {
-            client.say(channel, `aga`);
-          } else {
-            client.say(channel, `aga`);
-          }
-        }, 12000);
-      } else {
-        log(`${displayName} lost. Timing out for 300 seconds.`);
-        const timeoutResult = await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
-
-        if (timeoutResult.success) {
-          log(`Successfully timed out ${displayName}`, 'SUCCESS');
+      // Wait for wheel animation to complete (12 seconds) before applying VIP/timeout
+      setTimeout(async () => {
+        if (roll > 90) {
+          log(`${displayName} won!`, 'SUCCESS');
+          await assignVIP(broadcasterId, userId);
+          client.say(channel, `aga`);
         } else {
-          log(`Failed to timeout ${displayName}`, 'ERROR');
-        }
-
-        setTimeout(() => {
+          log(`${displayName} lost`);
+          await timeoutUser(broadcasterId, userId, 300, 'Lost the wheel spin');
           client.say(channel, `o7`);
-        }, 12000);
-      }
+        }
+      }, 12000);
     } catch (err) {
       log(`Error processing wheel spin for ${displayName}: ${err.message}`, 'ERROR');
       client.say(channel, `Something went wrong processing the wheel spin for ${displayName}.`);
@@ -313,13 +197,10 @@ client.on('message', async (channel, tags, message, self) => {
   }
 });
 
-client.on('connected', async (address, port) => {
+client.on('connected', (address, port) => {
   log(`Connected to ${address}:${port}`, 'SUCCESS');
   log(`Monitoring channel: ${process.env.TWITCH_CHANNEL}`);
   log(`Watching for redemptions: "${process.env.REDEMPTION_ID}"`);
-
-  // Validate token on connection
-  await validateToken();
 });
 
 client.on('disconnected', (reason) => {
