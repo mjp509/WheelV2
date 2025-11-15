@@ -116,7 +116,7 @@ function drawWheel(rotation = 0) {
     ctx.fillText('VIP', 0, 0);
 
     if (winImage.complete && winImage.naturalHeight !== 0) {
-        const imgSize = 160;
+        const imgSize = 70;
         ctx.drawImage(
             winImage,
             -imgSize / 2,
@@ -210,8 +210,8 @@ function spinWheel(isWin, duration = 12000) {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Cubic bezier easing function (0.3, 0, 0.2, 1) - slower start
-        const easeProgress = cubicBezier(progress, 0.3, 0, 0.2, 1);
+        // Cubic bezier easing function (0.1, 0.5, 0.1, 1)
+        const easeProgress = cubicBezier(progress, 0.1, 0.5, 0.1, 1);
         const currentAngle = easeProgress * totalRotation;
 
         // Calculate which segment is currently at the pointer (top center)

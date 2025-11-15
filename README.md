@@ -1,206 +1,51 @@
 # WheelV2 - Twitch Wheel Bot
 
-A Twitch chat bot that implements a "wheel of fortune" style gambling game using channel point redemptions.
-
-## What It Does
-
-When viewers redeem the configured channel point reward:
-- Bot rolls a random number (1-100)
-- **Win (>90)**: Viewer gets VIP status (10% chance)
-- **Lose (≤90)**: Viewer gets timed out for 300 seconds (90% chance)
-
-## Features
-
-- Secure credential management with environment variables
-- Comprehensive error handling and logging
-- Timestamped console logs for monitoring
-- Automatic configuration validation on startup
-- Connection status monitoring
-
-## Prerequisites
-
-- Node.js (v14 or higher)
-- A Twitch account for the bot
-- Twitch API credentials (Client ID and Access Token)
-- Moderator or Broadcaster permissions in your channel
+Twitch wheel bot with OBS overlay. Viewers redeem a channel point reward to spin the wheel - 10% chance for VIP, 90% chance for timeout.
 
 ## Setup
 
-### 1. Clone or Download
-
-Download this project to your local machine.
-
-### 2. Install Dependencies
-
+1. **Install dependencies**
 ```bash
 npm install
 ```
 
-### 3. Get Twitch API Credentials
+2. **Configure `.env`**
 
-1. Go to [Twitch Developer Console](https://dev.twitch.tv/console)
-2. Create a new application
-3. Note your **Client ID**
-4. Generate an **OAuth token** for your bot account
-   - You can use [Twitch Token Generator](https://twitchtokengenerator.com/)
-   - Required scopes: `chat:read`, `chat:edit`, `channel:manage:vips`
+Copy `.env.example` to `.env` and fill in:
 
-### 4. Enable OBS WebSocket Server
+- `TWITCH_CHANNEL` - Your channel name
+- `TWITCH_CLIENT_ID` - Get from [Twitch Dev Console](https://dev.twitch.tv/console)
+- `TWITCH_ACCESS_TOKEN` - Generate at [Twitch Token Generator](https://twitchtokengenerator.com/) with scopes: `chat:read`, `chat:edit`, `channel:manage:vips`, `moderator:manage:banned_users`
+- `REDEMPTION_ID` - Find yours at https://www.instafluff.tv/TwitchCustomRewardID/?channel=YOURTWITCHCHANNEL
 
-1. Open OBS Studio
-2. Go to **Tools** > **WebSocket Server Settings**
-3. Check **Enable WebSocket server**
-4. Note the **Server Password** (you'll need this for the `.env` file)
-5. Keep the default port (4455) unless you have a conflict
-6. Click **Apply** and **OK**
+3. **Add assets to `public/assets/`**
 
-### 5. Configure Environment Variables
+Required:
+- `Lose.webp` - Wheel background
+- `Win.png` - VIP section image
+- `Pointer.png` - Center pointer
+- `w_Brian.wav` - Win sound
+- `L_Brian.wav` - Lose sound
 
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Edit `.env` with your actual values:
-   ```env
-   TWITCH_BOT_USERNAME=your_bot_username
-   TWITCH_CHANNEL=your_channel_name
-   TWITCH_CLIENT_ID=your_client_id
-   TWITCH_ACCESS_TOKEN=oauth:your_access_token
-   TWITCH_REFRESH_TOKEN=your_refresh_token
-   REDEMPTION_TITLE=wheel
-   OBS_PASSWORD=your_obs_websocket_password
-   ```
-
-### 6. Add Assets
-
-The wheel uses custom files in `public/assets/`:
-
-**Required Images:**
-- `Lose.webp` - Background image for the entire wheel
-- `Win.png` - Image displayed in VIP section below text
-- `Pointer.png` - Center pointer image
-
-**Sound Effects:**
-- `w_Brian.wav` - Plays when viewer wins VIP
-- `L_Brian.wav` - Plays when viewer gets timed out
-
-The wheel will still work without sound files, but audio enhances the experience!
-
-### 7. Create Channel Point Reward
-
-1. Go to your Twitch Creator Dashboard
-2. Navigate to Viewer Rewards → Channel Points
-3. Create a custom reward with the exact title specified in `REDEMPTION_TITLE` (default: "wheel")
-4. Set the cost and other parameters as desired
-
-## Running the Bot
-
+4. **Run the bot**
 ```bash
 node index.js
 ```
 
-You should see output like:
-```
-[2025-11-05T12:00:00.000Z] ℹ️ INFO: Attempting to connect to OBS WebSocket...
-[2025-11-05T12:00:00.050Z] ✅ SUCCESS: Connected to OBS WebSocket
-[2025-11-05T12:00:00.100Z] ✅ SUCCESS: HTTP server running on http://localhost:3000
-[2025-11-05T12:00:00.150Z] ✅ SUCCESS: Add to OBS as Browser Source: http://localhost:3000
-[2025-11-05T12:00:00.200Z] ✅ SUCCESS: Connected to irc-ws.chat.twitch.tv:443
-[2025-11-05T12:00:00.250Z] ℹ️ INFO: Monitoring channel: your_channel
-[2025-11-05T12:00:00.250Z] ℹ️ INFO: Watching for redemptions: "wheel"
-```
-
 ## OBS Setup
 
-The bot now includes an animated wheel overlay that you can add to OBS:
+1. Add **Browser Source** in OBS
+2. URL: `http://localhost:3000`
+3. Width: `800`, Height: `800`, FPS: `60`
 
-1. **Start the bot** using `node index.js`
-2. **In OBS**, add a new source:
-   - Click the **+** button in the Sources panel
-   - Select **Browser**
-   - Name it "Wheel Overlay" (or whatever you prefer)
-3. **Configure the Browser Source**:
-   - URL: `http://localhost:3000`
-   - Width: `800`
-   - Height: `800`
-   - FPS: `60`
-   - Check "Shutdown source when not visible" (optional)
-4. **Position the wheel** in your scene as desired
-5. When a viewer redeems the wheel reward, the animation will automatically play in OBS!
+The wheel appears automatically when someone redeems the reward.
 
-### Features of the Wheel Overlay:
-- Animated spinning wheel with 90% timeout and 10% VIP segments
-- Custom "Lose.webp" image covers entire wheel background
-- VIP section highlighted with semi-transparent gold overlay
-- Green "VIP" text with Win.png image underneath in VIP section
-- "BAN" text at the top of the wheel
-- Hidden by default, only appears during spins
-- 12-second spin animation with 8 full rotations
-- Accurate landing - animation matches the actual result
-- Center pointer image for clear winning segment indication
-- Custom sound effects for wins and losses
-- Transparent background (works with any scene)
-- Auto-hides 5 seconds after animation completes
+## How It Works
 
-## Configuration
-
-All configuration is done via the `.env` file:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `TWITCH_BOT_USERNAME` | Bot account username | `my_bot_account` |
-| `TWITCH_CHANNEL` | Channel to monitor | `my_channel` |
-| `TWITCH_CLIENT_ID` | Twitch API Client ID | `abc123...` |
-| `TWITCH_ACCESS_TOKEN` | OAuth token (must start with `oauth:`) | `oauth:xyz789...` |
-| `TWITCH_REFRESH_TOKEN` | Refresh token for token renewal | `def456...` |
-| `REDEMPTION_TITLE` | Exact name of channel point reward | `wheel` |
-| `OBS_PASSWORD` | OBS WebSocket server password | `your_password` |
-| `PORT` | HTTP server port (optional, defaults to 3000) | `3000` |
-
-## Logs
-
-The bot provides detailed logs:
-
-- `ℹ️ INFO`: General information
-- `✅ SUCCESS`: Successful operations
-- `❌ ERROR`: Errors and failures
-
-All logs include timestamps for easy monitoring and debugging.
-
-## Security
-
-- **Never commit `.env` file** - It contains your credentials
-- **Never share your access tokens** - They provide full access to your bot account
-- The `.gitignore` file is configured to prevent accidental commits
-- Consider rotating tokens regularly
-
-## Troubleshooting
-
-### Bot doesn't connect
-- Verify your `TWITCH_ACCESS_TOKEN` is valid and starts with `oauth:`
-- Check that your bot account exists and is not banned
-
-### Redemptions not detected
-- Ensure `REDEMPTION_TITLE` matches your channel point reward name exactly (case-sensitive)
-- Verify the bot account has joined the channel successfully
-
-### VIP assignment fails
-- Bot account needs moderator permissions in your channel
-- Check that you haven't reached the VIP limit
-- Verify your access token has the `channel:manage:vips` scope
-
-### API errors
-- Check that your `TWITCH_CLIENT_ID` is correct
-- Ensure your access token hasn't expired
-- Review error logs for specific API response messages
-
-### OBS WebSocket connection fails
-- Make sure OBS is running before starting the bot
-- Verify WebSocket server is enabled in OBS (Tools > WebSocket Server Settings)
-- Check that the password in `.env` matches the OBS WebSocket password
-- Ensure port 4455 is not blocked by firewall
-- The bot will automatically retry connection up to 5 times with increasing delays
+- Spins for 12 seconds
+- Win (>90): VIP assigned after animation completes
+- Lose (≤90): 300 second timeout after animation completes
+- Tick sound plays as wheel spins past segments
 
 ## License
 

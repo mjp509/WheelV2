@@ -8,7 +8,6 @@ const path = require('path');
 
 // Validate required environment variables
 const requiredEnvVars = [
-  'TWITCH_BOT_USERNAME',
   'TWITCH_CHANNEL',
   'TWITCH_CLIENT_ID',
   'TWITCH_ACCESS_TOKEN',
