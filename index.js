@@ -24,8 +24,7 @@ for (const envVar of requiredEnvVars) {
 // Logger with timestamps
 function log(message, level = 'INFO') {
   const timestamp = new Date().toISOString();
-  const emoji = level === 'ERROR' ? '❌' : level === 'SUCCESS' ? '✅' : 'ℹ️';
-  console.log(`[${timestamp}] ${emoji} ${level}: ${message}`);
+  console.log(`[${timestamp}] ${level} : ${message}`);
 }
 
 // HTTP server for wheel overlay
