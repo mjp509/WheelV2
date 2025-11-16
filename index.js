@@ -227,7 +227,7 @@ client.on('message', async (channel, tags, message, self) => {
               if (result.success) {
                 await client.say(channel, `aga`);
               } else if (result.alreadyVIP) {
-                await client.say(channel, `${displayName} is already VIP! Lucky escape.`);
+                await client.say(channel, `aga`);
               } else {
                 await client.say(channel, `${displayName} won but couldn't grant VIP.`);
               }
@@ -239,7 +239,6 @@ client.on('message', async (channel, tags, message, self) => {
               log(`${displayName} is the broadcaster and cannot be timed out.`);
             } else if (isModerator) {
               log(`${displayName} is a moderator and cannot be timed out.`);
-              await client.say(channel, `o7`);
             } else {
               const result = await timeoutUser(broadcasterId, userId, 90, 'Lost the wheel spin');
 
