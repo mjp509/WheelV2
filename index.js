@@ -16,7 +16,7 @@ const requiredEnvVars = [
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    console.error(`❌ Missing required environment variable: ${envVar}`);
+    console.error(`Missing required environment variable: ${envVar}`);
     process.exit(1);
   }
 }
@@ -24,7 +24,7 @@ for (const envVar of requiredEnvVars) {
 // Logger with timestamps
 function log(message, level = 'INFO') {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${level} : ${message}`);
+  console.log(`[${timestamp}] ${level}: ${message}`);
 }
 
 // HTTP server for wheel overlay
