@@ -134,6 +134,25 @@ async function timeoutUser(broadcasterId, userId, duration, reason) {
   }
 }
 
+async function checkIfModerator(broadcasterId, userId) {
+  try {
+    const res = await axios.get(
+      `https://api.twitch.tv/helix/moderation/moderators?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${getCleanAccessToken()}`
+        }
+      }
+    );
+
+    return res.data.data.length > 0;
+  } catch (err) {
+    log(`Failed to check moderator status: ${err.message}`, 'ERROR');
+    return false;
+  }
+}
+
 async function assignVIP(broadcasterId, userId) {
   try {
     const res = await axios.post(
@@ -191,14 +210,18 @@ client.on('message', async (channel, tags, message, self) => {
       // Wait for wheel animation to complete (14 seconds) before applying VIP/timeout
       setTimeout(async () => {
         try {
-          // Check if user is the broadcaster
+          // Check if user is the broadcaster or a moderator
           const isBroadcaster = userId === broadcasterId;
+          const isModerator = await checkIfModerator(broadcasterId, userId);
 
           if (roll > 90) {
             log(`${displayName} won!`, 'SUCCESS');
 
             if (isBroadcaster) {
               log(`${displayName} is the broadcaster and cannot be granted VIP.`);
+            } else if (isModerator) {
+              log(`${displayName} is a moderator - keeping mod status instead of granting VIP.`);
+              await client.say(channel, `aga`);
             } else {
               const result = await assignVIP(broadcasterId, userId);
 
@@ -215,13 +238,16 @@ client.on('message', async (channel, tags, message, self) => {
 
             if (isBroadcaster) {
               log(`${displayName} is the broadcaster and cannot be timed out.`);
+            } else if (isModerator) {
+              log(`${displayName} is a moderator and cannot be timed out.`);
+              await client.say(channel, `o7`);
             } else {
               const result = await timeoutUser(broadcasterId, userId, 90, 'Lost the wheel spin');
 
               if (result.success) {
                 await client.say(channel, `o7`);
               } else if (result.cannotTimeout) {
-                await client.say(channel, `${displayName} cannot be timed out (VIP/Mod).`);
+                await client.say(channel, `o7`);
               } else {
                 await client.say(channel, `${displayName} lost but couldn't apply timeout.`);
               }

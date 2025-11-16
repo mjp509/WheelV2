@@ -144,7 +144,7 @@ function drawWheel(rotation = 0) {
     ctx.stroke();
 
     // Draw BAN text
-    ctx.font = '300 36px Arial';
+    ctx.font = '300 50px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ff0000';
