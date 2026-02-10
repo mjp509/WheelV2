@@ -6,8 +6,8 @@ canvas.width = 600;
 canvas.height = 600;
 
 const segments = 20;
-const redSegments = 18; // 90% lose
-const greenSegments = 2; // 10% win
+const redSegments = 19; // 95% lose
+const greenSegments = 1; // 5% win
 
 let currentRotation = 0;
 let isSpinning = false;
@@ -116,7 +116,7 @@ function drawWheel(rotation = 0) {
     ctx.fillText('VIP', 0, 0);
 
     if (winImage.complete && winImage.naturalHeight !== 0) {
-        const imgSize = 70;
+        const imgSize = 50;
         ctx.drawImage(
             winImage,
             -imgSize / 2,

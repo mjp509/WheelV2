@@ -152,6 +152,66 @@ async function checkIfModerator(broadcasterId, userId) {
   }
 }
 
+async function addModerator(broadcasterId, userId) {
+  try {
+    const res = await axios.post(
+      `https://api.twitch.tv/helix/moderation/moderators?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+      null,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${getCleanAccessToken()}`
+        }
+      }
+    );
+
+    return { success: res.status === 204 };
+  } catch (err) {
+    const status = err.response?.status;
+    log(`Failed to add moderator (${status}): ${err.response?.data?.message || err.message}`, 'ERROR');
+    return { success: false };
+  }
+}
+
+async function checkIfVIP(broadcasterId, userId) {
+  try {
+    const res = await axios.get(
+      `https://api.twitch.tv/helix/channels/vips?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${getCleanAccessToken()}`
+        }
+      }
+    );
+
+    return res.data.data.length > 0;
+  } catch (err) {
+    log(`Failed to check VIP status: ${err.message}`, 'ERROR');
+    return false;
+  }
+}
+
+async function removeVIP(broadcasterId, userId) {
+  try {
+    const res = await axios.delete(
+      `https://api.twitch.tv/helix/channels/vips?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${getCleanAccessToken()}`
+        }
+      }
+    );
+
+    return { success: res.status === 204 };
+  } catch (err) {
+    const status = err.response?.status;
+    log(`Failed to remove VIP (${status}): ${err.response?.data?.message || err.message}`, 'ERROR');
+    return { success: false };
+  }
+}
+
 async function assignVIP(broadcasterId, userId) {
   try {
     const res = await axios.post(
@@ -190,11 +250,13 @@ client.on('message', async (channel, tags, message, self) => {
 
     log(`${displayName} spun the wheel and rolled ${roll}`);
 
+    const isWin = roll > 90;
+
     broadcastToClients({
       type: 'spin',
       username: displayName,
       roll: roll,
-      isWin: roll > 90
+      isWin: isWin
     });
 
     try {
@@ -213,8 +275,26 @@ client.on('message', async (channel, tags, message, self) => {
           const isBroadcaster = userId === broadcasterId;
           const isModerator = await checkIfModerator(broadcasterId, userId);
 
-          if (roll > 90) {
-            log(`${displayName} won!`, 'SUCCESS');
+          if (roll === 100) {
+            // 1% chance for mod
+            log(`${displayName} won MOD!`, 'SUCCESS');
+
+            if (isBroadcaster) {
+              log(`${displayName} is the broadcaster and cannot be granted mod.`);
+            } else if (isModerator) {
+              log(`${displayName} is already a moderator.`);
+              await client.say(channel, `${displayName} is already a mod!`);
+            } else {
+              const result = await addModerator(broadcasterId, userId);
+
+              if (result.success) {
+                await client.say(channel, `happi`);
+              } else {
+                await client.say(channel, `${displayName} won mod but couldn't grant it.`);
+              }
+            }
+          } else if (roll > 90) {
+            log(`${displayName} won VIP!`, 'SUCCESS');
 
             if (isBroadcaster) {
               log(`${displayName} is the broadcaster and cannot be granted VIP.`);
@@ -240,7 +320,20 @@ client.on('message', async (channel, tags, message, self) => {
             } else if (isModerator) {
               log(`${displayName} is a moderator and cannot be timed out.`);
             } else {
-              const result = await timeoutUser(broadcasterId, userId, 90, 'Lost the wheel spin');
+              // Check if user has VIP and remove it
+              const isVIP = await checkIfVIP(broadcasterId, userId);
+              if (isVIP) {
+                const removeResult = await removeVIP(broadcasterId, userId);
+                if (removeResult.success) {
+                  log(`${displayName} lost their VIP!`, 'INFO');
+                  await client.say(channel, `RIPBOZO`);
+                }
+              }
+
+              // Random ban timer between 67 and 402 seconds (67s to 6.7min)
+              const banDuration = Math.floor(Math.random() * 336) + 67;
+              log(`Timing out ${displayName} for ${banDuration} seconds`);
+              const result = await timeoutUser(broadcasterId, userId, banDuration, 'Lost the wheel spin');
 
               if (result.success) {
                 await client.say(channel, `o7`);
