@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Connecting...</title>
+  <style>
+    body {
+      background: #0e0e10;
+      color: #efeff1;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .msg { text-align: center; }
+    .msg h2 { color: #9146ff; margin-bottom: 8px; }
+    .msg p { color: #adadb8; }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <h2>Connected!</h2>
+    <p>This window will close automatically...</p>
+  </div>
+  <script>
+    (function () {
+      var hash = window.location.hash.substring(1);
+      var params = new URLSearchParams(hash);
+      var token = params.get('access_token');
+
+      if (!token) {
+        document.querySelector('h2').textContent = 'Error';
+        document.querySelector('p').textContent = 'No access token found. Please try again.';
+        return;
+      }
+
+      if (window.opener) {
+        window.opener.postMessage({ type: 'twitch-token', token: token }, window.location.origin);
+        setTimeout(function () { window.close(); }, 1000);
+      } else {
+        // Fallback: store in localStorage and redirect
+        localStorage.setItem('wheelv2_token', token);
+        window.location.href = '/setup/';
+      }
+    })();
+  </script>
+</body>
+</html>

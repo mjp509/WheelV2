@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WheelV2 Setup</title>
+  <link rel="stylesheet" href="setup.css">
+</head>
+<body>
+  <div class="container">
+    <h1 class="logo">WheelV2</h1>
+
+    <!-- Progress dots -->
+    <div class="progress">
+      <div class="dot active" data-step="1">1</div>
+      <div class="dot" data-step="2">2</div>
+      <div class="dot" data-step="3">3</div>
+      <div class="dot" data-step="4">4</div>
+      <div class="dot" data-step="5">5</div>
+    </div>
+
+    <!-- Step 1: Welcome -->
+    <div class="step active" id="step-1">
+      <div class="card">
+        <h2>Welcome!</h2>
+        <p>WheelV2 is a Twitch channel point wheel overlay for OBS. When a viewer redeems a channel point reward, the wheel spins &mdash; win and get VIP, lose and get timed out!</p>
+        <p>This wizard will walk you through connecting your Twitch account, picking a channel point reward, and getting the overlay into OBS.</p>
+        <button class="btn primary" onclick="goToStep(2)">Get Started</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Create Twitch App -->
+    <div class="step" id="step-2">
+      <div class="card">
+        <h2>Create a Twitch Application</h2>
+        <ol>
+          <li>Go to <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener">dev.twitch.tv/console/apps</a> and log in.</li>
+          <li>Click <strong>"Register Your Application"</strong>.</li>
+          <li>Set the <strong>Name</strong> to anything (e.g. "WheelV2").</li>
+          <li>Add this <strong>OAuth Redirect URL</strong>:
+            <div class="code-block" id="redirect-uri">http://localhost:3000/setup/callback.html</div>
+          </li>
+          <li>Set <strong>Category</strong> to "Chat Bot".</li>
+          <li>Click <strong>Create</strong>, then click <strong>Manage</strong> on your new app.</li>
+          <li>Copy the <strong>Client ID</strong> and paste it below.</li>
+        </ol>
+        <label for="client-id-input">Client ID</label>
+        <input type="text" id="client-id-input" placeholder="e.g. abc123def456..." spellcheck="false" autocomplete="off">
+        <div class="error-msg" id="step2-error"></div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="goToStep(1)">Back</button>
+          <button class="btn primary" id="step2-next" onclick="validateStep2()">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Connect with Twitch -->
+    <div class="step" id="step-3">
+      <div class="card">
+        <h2>Connect with Twitch</h2>
+        <p>Click the button below to authorize WheelV2 with your Twitch account. A popup will open for you to log in and approve permissions.</p>
+        <button class="btn twitch" id="connect-btn" onclick="connectTwitch()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M4.164 1L1.5 5.5v12h4.5V20h3l2.5-2.5h3.5L19.5 13V1H4.164zM17.5 12l-3 3H10l-2.5 2.5V15H4.5V3h13v9z"/><path d="M14.5 6h-2v5h2V6zM10.5 6h-2v5h2V6z"/></svg>
+          Connect with Twitch
+        </button>
+        <div class="status-box hidden" id="connect-status">
+          <span class="status-icon">&#10003;</span>
+          Connected as: <strong id="connect-username"></strong>
+        </div>
+        <div class="error-msg" id="step3-error"></div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="goToStep(2)">Back</button>
+          <button class="btn primary disabled" id="step3-next" onclick="goToStep(4)" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Select Reward -->
+    <div class="step" id="step-4">
+      <div class="card">
+        <h2>Select Channel Point Reward</h2>
+        <p>Choose the channel point reward that will trigger the wheel spin. If you haven't created one yet, go to your Twitch dashboard and create a custom reward first.</p>
+        <div class="select-row">
+          <select id="reward-select" disabled>
+            <option value="">Loading rewards...</option>
+          </select>
+          <button class="btn icon" onclick="loadRewards()" title="Refresh rewards">&#8635;</button>
+        </div>
+        <div class="error-msg" id="step4-error"></div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="goToStep(3)">Back</button>
+          <button class="btn primary disabled" id="step4-next" onclick="validateStep4()" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Confirm & Launch -->
+    <div class="step" id="step-5">
+      <div class="card">
+        <h2>Confirm &amp; Launch</h2>
+        <p>Review your settings below, then click "Save &amp; Start" to launch the bot.</p>
+        <table class="summary-table">
+          <tr><td>Channel</td><td id="summary-channel"></td></tr>
+          <tr><td>Client ID</td><td id="summary-clientid"></td></tr>
+          <tr><td>Connected As</td><td id="summary-username"></td></tr>
+          <tr><td>Reward</td><td id="summary-reward"></td></tr>
+        </table>
+        <div class="error-msg" id="step5-error"></div>
+        <button class="btn primary wide" id="save-btn" onclick="saveAndStart()">Save &amp; Start</button>
+
+        <div class="success-box hidden" id="success-info">
+          <h3>You're all set!</h3>
+          <p>The bot is now running. Add the overlay to OBS:</p>
+          <ol>
+            <li>In OBS, add a <strong>Browser Source</strong>.</li>
+            <li>Set the URL to:
+              <div class="code-block">http://localhost:3000</div>
+            </li>
+            <li>Set Width to <strong>800</strong> and Height to <strong>800</strong>.</li>
+            <li>Set FPS to <strong>60</strong>.</li>
+            <li>Click OK &mdash; you're live!</li>
+          </ol>
+          <a href="/" target="_blank" class="btn secondary">Open Overlay Preview</a>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn secondary" onclick="goToStep(4)">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="setup.js"></script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0e0e10;
+  color: #efeff1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+}
+
+.container {
+  width: 100%;
+  max-width: 560px;
+}
+
+.logo {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #9146ff;
+  margin-bottom: 24px;
+}
+
+/* Progress dots */
+.progress {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1f1f23;
+  color: #adadb8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+}
+
+.dot.active {
+  background: #9146ff;
+  color: #fff;
+}
+
+.dot.done {
+  background: #00c853;
+  color: #fff;
+}
+
+/* Steps */
+.step {
+  display: none;
+}
+
+.step.active {
+  display: block;
+}
+
+/* Card */
+.card {
+  background: #1f1f23;
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.card h2 {
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+}
+
+.card p {
+  color: #adadb8;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.card ol {
+  color: #adadb8;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  padding-left: 20px;
+}
+
+.card ol li {
+  margin-bottom: 4px;
+}
+
+.card a {
+  color: #bf94ff;
+  text-decoration: none;
+}
+
+.card a:hover {
+  text-decoration: underline;
+}
+
+/* Inputs */
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: #adadb8;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input[type="text"],
+select {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0e0e10;
+  border: 2px solid #303032;
+  border-radius: 8px;
+  color: #efeff1;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus,
+select:focus {
+  border-color: #9146ff;
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23adadb8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.select-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.select-row select {
+  flex: 1;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn.primary {
+  background: #9146ff;
+  color: #fff;
+}
+
+.btn.secondary {
+  background: #303032;
+  color: #efeff1;
+}
+
+.btn.twitch {
+  background: #9146ff;
+  color: #fff;
+  font-size: 1rem;
+  padding: 12px 28px;
+  margin-bottom: 16px;
+}
+
+.btn.icon {
+  background: #303032;
+  color: #efeff1;
+  padding: 10px 12px;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn.wide {
+  width: 100%;
+  justify-content: center;
+  padding: 14px;
+  font-size: 1.05rem;
+}
+
+.btn.disabled,
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+/* Code block */
+.code-block {
+  background: #0e0e10;
+  border: 1px solid #303032;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.85rem;
+  color: #bf94ff;
+  margin: 8px 0;
+  word-break: break-all;
+  user-select: all;
+}
+
+/* Status / success boxes */
+.status-box {
+  background: #1a3a1a;
+  border: 1px solid #2e7d32;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  color: #00c853;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.success-box {
+  background: #1a3a1a;
+  border: 1px solid #2e7d32;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+
+.success-box h3 {
+  color: #00c853;
+  margin-bottom: 12px;
+}
+
+.success-box p,
+.success-box ol {
+  color: #adadb8;
+  line-height: 1.8;
+}
+
+.success-box ol {
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+/* Summary table */
+.summary-table {
+  width: 100%;
+  margin-bottom: 20px;
+  border-collapse: collapse;
+}
+
+.summary-table td {
+  padding: 8px 0;
+  border-bottom: 1px solid #303032;
+}
+
+.summary-table td:first-child {
+  color: #adadb8;
+  font-weight: 600;
+  width: 120px;
+}
+
+.summary-table td:last-child {
+  color: #efeff1;
+  word-break: break-all;
+}
+
+/* Error message */
+.error-msg {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  min-height: 20px;
+}
+
+/* Utility */
+.hidden {
+  display: none !important;
+}
+
+/* Loading spinner for buttons */
+.btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.btn.loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

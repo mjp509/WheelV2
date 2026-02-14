@@ -1,8 +1,11 @@
 # Environment variables (contains secrets!)
 .env
 
-# Old config file (if you still have it)
+# Runtime config (contains secrets)
 config.json
+
+# Build output
+dist/
 
 # Dependencies
 node_modules/
